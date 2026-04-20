@@ -1,6 +1,6 @@
 ﻿# AI Vocabulary Hologram
 
-A cinematic, gesture-controlled vocabulary demo built with React + Vite + MediaPipe + React Three Fiber.
+A cinematic, multi-mode AI showcase built with React + Vite + MediaPipe + React Three Fiber.
 
 ## Features
 
@@ -17,12 +17,20 @@ A cinematic, gesture-controlled vocabulary demo built with React + Vite + MediaP
   - Animated detail HUD + directional transitions
   - Quiz feedback (correct pulse / wrong highlight)
   - Finale transformation into a knowledge cube and CTA reveal
+- Additional showcase mode: **AI Core: Cognitive Upgrade System**
+  - Robotic 3D intelligence-core boot sequence
+  - Core scan, interaction, opening, and neural-lattice expansion phases
+  - Vocabulary represented as glowing knowledge nodes in an internal memory network
+  - Final sci-fi gateway reveal that transitions users into the vocabulary platform mode
+- In-app mode switcher for switching between showcase experiences
 
 ## Architecture
 
 - `src/modules/handTracking`: webcam + MediaPipe integration, frame extraction, landmark smoothing
 - `src/modules/gestureEngine`: gesture features, hysteresis gates, swipe detection, stable gesture snapshot
 - `src/modules/interaction`: interaction state machine and mapping from gestures to UI/scene actions
+- `src/modules/modeManager`: persistent experience mode management
+- `src/modules/aiCore`: AI Core cognitive-upgrade controllers (interaction, animation, reveal sequencing, scene orchestration)
 - `src/visual`: Three.js scene, HUD overlay, layout math
 - `src/data`: vocabulary dataset
 

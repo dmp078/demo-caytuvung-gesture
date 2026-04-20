@@ -1,4 +1,6 @@
-﻿export type Vec2 = {
+﻿import type { RefObject } from 'react'
+
+export type Vec2 = {
   x: number
   y: number
 }
@@ -71,6 +73,15 @@ export type WordNode = {
   icon: string
 }
 
+export type ExperienceModeId = 'vocabulary_hologram' | 'ai_core_cognitive_upgrade'
+
+export type ExperienceMode = {
+  id: ExperienceModeId
+  title: string
+  subtitle: string
+  accent: string
+}
+
 export type DetailMode = 'meaning' | 'example' | 'pronunciation'
 
 export type DemoPhase =
@@ -111,6 +122,63 @@ export type InteractionState = {
   headline: string
 }
 
+export type AICorePhase =
+  | 'boot'
+  | 'formation'
+  | 'scan'
+  | 'interaction'
+  | 'opening'
+  | 'expansion'
+  | 'reveal'
+
+export type AICoreRevealStep = 'collapsing' | 'unfolding' | 'ready'
+
+export type AICoreInteractionState = {
+  hoveredNodeId: string | null
+  selectedNodeId: string | null
+  exploredNodeIds: string[]
+  coreEngagement: number
+  openingRequestCount: number
+  revealRequestCount: number
+  pointer: Vec2
+  pointerVelocity: Vec2
+}
+
+export type AICoreAnimationState = {
+  phase: AICorePhase
+  headline: string
+  systemLine: string
+  bootLine: string
+  phaseStartedAt: number
+}
+
+export type AICoreSceneState = AICoreAnimationState &
+  AICoreInteractionState & {
+    revealStep: AICoreRevealStep | null
+    ctaUnlocked: boolean
+    knowledgeProgress: number
+  }
+
+export type AICoreSceneActions = {
+  registerPointerMove: (nextPointer: Vec2) => void
+  registerCoreEngagement: (source?: 'pointer' | 'gesture') => void
+  requestCoreOpening: () => void
+  setHoveredNode: (nodeId: string | null) => void
+  selectNode: (nodeId: string) => void
+  requestReveal: () => void
+  clearSelectedNode: () => void
+}
+
+export type AICoreSceneController = {
+  state: AICoreSceneState
+  actions: AICoreSceneActions
+}
+
+export type ExperienceModeManager = {
+  activeMode: ExperienceModeId
+  setMode: (mode: ExperienceModeId) => void
+}
+
 export type UseHandTrackingResult = {
   frame: HandFrame | null
   status: 'loading' | 'ready' | 'running' | 'error'
@@ -118,4 +186,3 @@ export type UseHandTrackingResult = {
   error: string | null
   videoRef: RefObject<HTMLVideoElement | null>
 }
-import type { RefObject } from 'react'

@@ -100,7 +100,7 @@ const deriveFrame = (
   return { frame, smoothedLandmarks: landmarks }
 }
 
-export const useHandTracking = (): UseHandTrackingResult => {
+export const useHandTracking = (enabled = true): UseHandTrackingResult => {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const detectorRef = useRef<HandLandmarker | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
@@ -120,6 +120,32 @@ export const useHandTracking = (): UseHandTrackingResult => {
 
   useEffect(() => {
     let cancelled = false
+
+    const stopResources = () => {
+      if (frameLoopRef.current !== null) {
+        cancelAnimationFrame(frameLoopRef.current)
+      }
+      frameLoopRef.current = null
+      detectorRef.current?.close()
+      detectorRef.current = null
+      streamRef.current?.getTracks().forEach((track) => track.stop())
+      streamRef.current = null
+      previousLandmarksRef.current = null
+      lastDetectionTimeRef.current = 0
+      fpsWindowRef.current = {
+        firstTimestamp: 0,
+        sampleCount: 0,
+      }
+    }
+
+    if (!enabled) {
+      stopResources()
+      setFrame(null)
+      setFps(0)
+      setError(null)
+      setStatus('ready')
+      return stopResources
+    }
 
     const updateFps = (timestamp: number) => {
       const window = fpsWindowRef.current
@@ -171,6 +197,7 @@ export const useHandTracking = (): UseHandTrackingResult => {
 
     const setup = async () => {
       try {
+        setStatus('loading')
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
             width: { ideal: 960 },
@@ -229,13 +256,9 @@ export const useHandTracking = (): UseHandTrackingResult => {
 
     return () => {
       cancelled = true
-      if (frameLoopRef.current !== null) {
-        cancelAnimationFrame(frameLoopRef.current)
-      }
-      detectorRef.current?.close()
-      streamRef.current?.getTracks().forEach((track) => track.stop())
+      stopResources()
     }
-  }, [])
+  }, [enabled])
 
   return {
     frame,

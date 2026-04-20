@@ -14,9 +14,15 @@ const SUMMON_DURATION_MS = 900
 const QUIZ_FEEDBACK_DURATION_MS = 1300
 const FINALE_COLLAPSE_MS = 1500
 const FINALE_OPEN_MS = 1200
-const DIRECT_WORD_SELECT_DWELL_MS = 280
-const DIRECT_QUIZ_SELECT_DWELL_MS = 320
-const DIRECT_SELECT_COOLDOWN_MS = 420
+const OPEN_PALM_SELECT_HOLD_MS = 3000
+const OPEN_PALM_SELECT_COOLDOWN_MS = 650
+const QUIZ_OPEN_PALM_HOLD_MS = 1200
+const QUIZ_SELECT_COOLDOWN_MS = 800
+const DETAIL_TO_QUIZ_HOLD_MS = 1200
+const DETAIL_TO_QUIZ_AUTO_MS = 2200
+const QUIZ_HOVER_DISTANCE = 1.05
+const PLATFORM_LAUNCH_HOLD_MS = 1200
+const PLATFORM_LAUNCH_COOLDOWN_MS = 1400
 
 const createEmptyQuiz = (): QuizState => ({
   promptWordId: null,
@@ -67,9 +73,9 @@ const createQuizForWord = (words: WordNode[], promptWordId: string): QuizState =
 const headlineByPhase: Record<InteractionState['phase'], string> = {
   awaiting_hand: 'Raise your hand to initialize the hologram',
   summoning: 'Energy core calibrating',
-  orbit: 'Swipe left/right to browse menu, pinch to open',
-  detail: 'Swipe left/right/up to switch training modes',
-  quiz: 'Point to an answer and pinch to confirm',
+  orbit: 'Swipe left/right to browse menu. Hold open palm for 3s to select.',
+  detail: 'Swipe left/right/up, pinch, or hold open palm to enter quiz.',
+  quiz: 'Hover an answer, then pinch or hold open palm to confirm.',
   finale: 'Knowledge core synchronized',
 }
 
@@ -115,9 +121,17 @@ export const useInteractionController = (
   const summonStartedAtRef = useRef(0)
   const quizAnsweredAtRef = useRef(0)
   const finaleStartedAtRef = useRef(0)
-  const hoveredWordSinceRef = useRef(0)
-  const hoveredQuizSinceRef = useRef(0)
-  const lastDirectSelectAtRef = useRef(0)
+  const openPalmSelectSinceRef = useRef(0)
+  const lastOpenPalmSelectAtRef = useRef(0)
+  const detailQuizHoldSinceRef = useRef(0)
+  const quizHoverSinceRef = useRef(0)
+  const lastQuizSelectAtRef = useRef(0)
+  const autoQuizReadyRef = useRef(false)
+  const detailStartedAtRef = useRef(0)
+  const platformLaunchHoldSinceRef = useRef(0)
+  const lastPlatformLaunchAtRef = useRef(0)
+  const pendingLaunchUrlRef = useRef<string | null>(null)
+  const successAlertShownRef = useRef(false)
   const milestonesRef = useRef<Milestones>({
     summoned: false,
     selectedWord: false,
@@ -161,7 +175,7 @@ export const useInteractionController = (
 
       if (
         gestures.openPalm.phase === 'start' &&
-        (previous.phase === 'awaiting_hand' || previous.phase === 'orbit')
+        previous.phase === 'awaiting_hand'
       ) {
         summonStartedAtRef.current = now
         milestonesRef.current.summoned = true
@@ -203,26 +217,37 @@ export const useInteractionController = (
           }))
           .sort((left, right) => left.distance - right.distance)[0]
 
-        const hoveredWordId = hoveredWord && hoveredWord.distance < 0.58 ? hoveredWord.id : null
-        if (hoveredWordId !== previous.hoveredWordId) {
-          hoveredWordSinceRef.current = now
-        }
+        const hoveredWordId = hoveredWord && hoveredWord.distance < 0.78 ? hoveredWord.id : null
         next.hoveredWordId = hoveredWordId
 
-        const canDirectSelect =
-          gestures.point.active &&
-          hoveredWordId &&
-          now - hoveredWordSinceRef.current >= DIRECT_WORD_SELECT_DWELL_MS &&
-          now - lastDirectSelectAtRef.current >= DIRECT_SELECT_COOLDOWN_MS
+        const focusedWordId = words[next.orbitFocusIndex]?.id ?? null
+        const selectionCandidateId = hoveredWordId ?? focusedWordId
+        const openPalmHoldActive =
+          gestures.openPalm.active && gestures.openPalm.strength > 0.46
+
+        if (openPalmHoldActive) {
+          if (openPalmSelectSinceRef.current === 0) {
+            openPalmSelectSinceRef.current = now
+          }
+        } else {
+          openPalmSelectSinceRef.current = 0
+        }
+
+        const canOpenPalmSelect =
+          Boolean(selectionCandidateId) &&
+          openPalmHoldActive &&
+          openPalmSelectSinceRef.current > 0 &&
+          now - openPalmSelectSinceRef.current >= OPEN_PALM_SELECT_HOLD_MS &&
+          now - lastOpenPalmSelectAtRef.current >= OPEN_PALM_SELECT_COOLDOWN_MS
 
         if (
           ((gestures.pinch.phase === 'start' ||
             (gestures.pinch.active && gestures.pinch.strength > 0.68)) ||
-            canDirectSelect) &&
-          hoveredWordId
+            canOpenPalmSelect) &&
+          selectionCandidateId
         ) {
-          next.selectedWordId = hoveredWordId
-          const selectedIndex = words.findIndex((word) => word.id === hoveredWordId)
+          next.selectedWordId = selectionCandidateId
+          const selectedIndex = words.findIndex((word) => word.id === selectionCandidateId)
           if (selectedIndex >= 0) {
             next.orbitFocusIndex = selectedIndex
           }
@@ -230,11 +255,64 @@ export const useInteractionController = (
           next.detailMode = 'meaning'
           next.interactionCount += 1
           milestonesRef.current.selectedWord = true
-          lastDirectSelectAtRef.current = now
+          openPalmSelectSinceRef.current = 0
+          lastOpenPalmSelectAtRef.current = now
+          autoQuizReadyRef.current = true
+          detailStartedAtRef.current = now
         }
       }
 
       if (next.phase === 'detail') {
+        const detailOpenPalmActive =
+          gestures.openPalm.active && gestures.openPalm.strength > 0.46
+
+        if (detailOpenPalmActive) {
+          if (detailQuizHoldSinceRef.current === 0) {
+            detailQuizHoldSinceRef.current = now
+          }
+        } else {
+          detailQuizHoldSinceRef.current = 0
+        }
+
+        const shouldOpenQuizByHold =
+          detailOpenPalmActive &&
+          detailQuizHoldSinceRef.current > 0 &&
+          now - detailQuizHoldSinceRef.current >= DETAIL_TO_QUIZ_HOLD_MS
+        const shouldOpenQuizByPinch = gestures.pinch.phase === 'start'
+        const selectedWord = next.selectedWordId
+          ? words.find((word) => word.id === next.selectedWordId)
+          : null
+        const isLaunchGatewayWord = Boolean(selectedWord?.launchUrl)
+        const launchOpenPalmActive =
+          isLaunchGatewayWord && gestures.openPalm.active && gestures.openPalm.strength > 0.5
+
+        if (launchOpenPalmActive) {
+          if (platformLaunchHoldSinceRef.current === 0) {
+            platformLaunchHoldSinceRef.current = now
+          }
+        } else {
+          platformLaunchHoldSinceRef.current = 0
+        }
+
+        const shouldLaunchByHold =
+          isLaunchGatewayWord &&
+          launchOpenPalmActive &&
+          platformLaunchHoldSinceRef.current > 0 &&
+          now - platformLaunchHoldSinceRef.current >= PLATFORM_LAUNCH_HOLD_MS &&
+          now - lastPlatformLaunchAtRef.current >= PLATFORM_LAUNCH_COOLDOWN_MS
+
+        const shouldLaunchByPinch =
+          isLaunchGatewayWord &&
+          gestures.pinch.phase === 'start' &&
+          now - lastPlatformLaunchAtRef.current >= PLATFORM_LAUNCH_COOLDOWN_MS
+
+        const shouldAutoOpenQuiz =
+          autoQuizReadyRef.current &&
+          detailStartedAtRef.current > 0 &&
+          now - detailStartedAtRef.current >= DETAIL_TO_QUIZ_AUTO_MS &&
+          Boolean(next.selectedWordId) &&
+          !selectedWord?.launchUrl
+
         if (gestures.swipeEvent) {
           if (gestures.swipeEvent.direction === 'left') {
             next.detailMode = 'meaning'
@@ -246,14 +324,58 @@ export const useInteractionController = (
             next.modeTransitionDirection = 'right'
           }
 
-          if (gestures.swipeEvent.direction === 'up' && next.selectedWordId) {
+          if (gestures.swipeEvent.direction === 'up' && next.selectedWordId && !selectedWord?.launchUrl) {
             next.phase = 'quiz'
             next.modeTransitionDirection = 'up'
             next.quiz = createQuizForWord(words, next.selectedWordId)
+            detailQuizHoldSinceRef.current = 0
           }
 
           next.interactionCount += 1
           milestonesRef.current.swipedMode = true
+        }
+
+        if (next.phase === 'detail' && (shouldLaunchByHold || shouldLaunchByPinch) && selectedWord?.launchUrl) {
+          pendingLaunchUrlRef.current = selectedWord.launchUrl
+          lastPlatformLaunchAtRef.current = now
+          platformLaunchHoldSinceRef.current = 0
+          next.interactionCount += 1
+        }
+
+        if (
+          next.phase === 'detail' &&
+          shouldOpenQuizByHold &&
+          next.selectedWordId &&
+          !selectedWord?.launchUrl
+        ) {
+          next.phase = 'quiz'
+          next.modeTransitionDirection = 'up'
+          next.quiz = createQuizForWord(words, next.selectedWordId)
+          next.interactionCount += 1
+          detailQuizHoldSinceRef.current = 0
+          autoQuizReadyRef.current = false
+        }
+
+        if (
+          next.phase === 'detail' &&
+          shouldOpenQuizByPinch &&
+          next.selectedWordId &&
+          !selectedWord?.launchUrl
+        ) {
+          next.phase = 'quiz'
+          next.modeTransitionDirection = 'up'
+          next.quiz = createQuizForWord(words, next.selectedWordId)
+          next.interactionCount += 1
+          detailQuizHoldSinceRef.current = 0
+          autoQuizReadyRef.current = false
+        }
+
+        if (next.phase === 'detail' && shouldAutoOpenQuiz && next.selectedWordId) {
+          next.phase = 'quiz'
+          next.modeTransitionDirection = 'up'
+          next.quiz = createQuizForWord(words, next.selectedWordId)
+          next.interactionCount += 1
+          autoQuizReadyRef.current = false
         }
       }
 
@@ -267,9 +389,9 @@ export const useInteractionController = (
           .sort((left, right) => left.distance - right.distance)[0]
 
         const hoveredQuizOptionId =
-          hoveredOption && hoveredOption.distance < 0.7 ? hoveredOption.id : null
+          hoveredOption && hoveredOption.distance < QUIZ_HOVER_DISTANCE ? hoveredOption.id : null
         if (hoveredQuizOptionId !== next.quiz.hoveredOptionId) {
-          hoveredQuizSinceRef.current = now
+          quizHoverSinceRef.current = now
         }
 
         next.quiz = {
@@ -277,16 +399,18 @@ export const useInteractionController = (
           hoveredOptionId: hoveredQuizOptionId,
         }
 
-        const canDirectQuizSelect =
-          gestures.point.active &&
-          hoveredQuizOptionId &&
-          now - hoveredQuizSinceRef.current >= DIRECT_QUIZ_SELECT_DWELL_MS &&
-          now - lastDirectSelectAtRef.current >= DIRECT_SELECT_COOLDOWN_MS
+        const openPalmQuizActive =
+          gestures.openPalm.active && gestures.openPalm.strength > 0.46
+        const canOpenPalmQuizSelect =
+          Boolean(hoveredQuizOptionId) &&
+          openPalmQuizActive &&
+          now - quizHoverSinceRef.current >= QUIZ_OPEN_PALM_HOLD_MS &&
+          now - lastQuizSelectAtRef.current >= QUIZ_SELECT_COOLDOWN_MS
 
         if (
           ((gestures.pinch.phase === 'start' ||
             (gestures.pinch.active && gestures.pinch.strength > 0.72)) ||
-            canDirectQuizSelect) &&
+            canOpenPalmQuizSelect) &&
           hoveredQuizOptionId &&
           !next.quiz.selectedOptionId
         ) {
@@ -301,7 +425,7 @@ export const useInteractionController = (
               selectedOptionId: selected.id,
               answerResult: selected.isCorrect ? 'correct' : 'wrong',
             }
-            lastDirectSelectAtRef.current = now
+            lastQuizSelectAtRef.current = now
           }
         }
 
@@ -312,12 +436,14 @@ export const useInteractionController = (
           next.phase = 'detail'
           next.detailMode = 'example'
           next.quiz = createEmptyQuiz()
+          autoQuizReadyRef.current = false
         }
 
         if (gestures.swipeEvent?.direction === 'left' || gestures.swipeEvent?.direction === 'right') {
           next.phase = 'detail'
           next.quiz = createEmptyQuiz()
           next.modeTransitionDirection = gestures.swipeEvent.direction
+          autoQuizReadyRef.current = false
         }
       }
 
@@ -328,9 +454,56 @@ export const useInteractionController = (
       }
 
       next.headline = headlineByPhase[next.phase]
+      if (next.phase === 'detail') {
+        const detailWord = next.selectedWordId
+          ? words.find((word) => word.id === next.selectedWordId)
+          : null
+        if (detailWord?.launchUrl) {
+          next.headline = 'CAY TU VUNG gateway ready. Pinch or hold open palm to launch.'
+        }
+      }
       return next
     })
   }, [gestures, words])
+
+  useEffect(() => {
+    if (
+      state.phase === 'awaiting_hand' ||
+      state.phase === 'summoning' ||
+      state.phase === 'orbit'
+    ) {
+      detailQuizHoldSinceRef.current = 0
+      autoQuizReadyRef.current = false
+      detailStartedAtRef.current = 0
+      platformLaunchHoldSinceRef.current = 0
+    }
+  }, [state.phase])
+
+  useEffect(() => {
+    if (!pendingLaunchUrlRef.current) {
+      return
+    }
+
+    const launchUrl = pendingLaunchUrlRef.current
+    pendingLaunchUrlRef.current = null
+    window.open(launchUrl, '_blank', 'noopener,noreferrer')
+  }, [state.interactionCount])
+
+  useEffect(() => {
+    if (state.phase !== 'quiz' || state.quiz.answerResult !== 'correct') {
+      successAlertShownRef.current = false
+      return
+    }
+
+    if (successAlertShownRef.current) {
+      return
+    }
+
+    successAlertShownRef.current = true
+    window.alert(
+      'Bạn đã chinh phục được giải ngân hà, muốn chinh phục thêm? Hãy vào Cày Từ Vựng!',
+    )
+  }, [state.phase, state.quiz.answerResult])
 
   return state
 }

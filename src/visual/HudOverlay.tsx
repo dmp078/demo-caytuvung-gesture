@@ -43,6 +43,9 @@ export const HudOverlay = ({
   }, [interaction.detailMode, selectedWord])
 
   const [typedDetail, setTypedDetail] = useState('')
+  const isLaunchGatewayWord = Boolean(selectedWord?.launchUrl)
+  const pinchStrengthPercent = Math.round(gestures.pinch.strength * 100)
+  const openPalmStrengthPercent = Math.round(gestures.openPalm.strength * 100)
 
   useEffect(() => {
     setTypedDetail('')
@@ -90,10 +93,18 @@ export const HudOverlay = ({
             {selectedWord.word} <span>{selectedWord.pronunciation}</span>
           </h2>
           <p>{typedDetail}</p>
+          {isLaunchGatewayWord && (
+            <p className="gateway-tip">
+              Gateway armed. Pinch once or hold open palm for 1.2s to open Cày Từ Vựng.
+            </p>
+          )}
           <div className="panel-footer">
-            <span>Pinch node: confirm</span>
+            {!isLaunchGatewayWord && <span>Pinch: open quiz now</span>}
+            {!isLaunchGatewayWord && <span>Swipe up: quiz mode</span>}
+            {!isLaunchGatewayWord && <span>Hold open palm 1.2s: quiz mode</span>}
+            {!isLaunchGatewayWord && <span>Auto quiz after 2.2s</span>}
             <span>Swipe left/right: switch panel</span>
-            <span>Swipe up: quiz mode</span>
+            {isLaunchGatewayWord && <span>Pinch OR hold open palm 1.2s: open platform</span>}
           </div>
         </section>
       )}
@@ -102,7 +113,36 @@ export const HudOverlay = ({
         <section className="quiz-panel">
           <div className="panel-title">Gesture Quiz Protocol</div>
           <h3>Pick the correct meaning for: {selectedWord.word}</h3>
-          <p>Point to a node and pinch to lock your answer.</p>
+          <p>Aim a quiz node, then pinch or hold open palm for 1.2s to lock your answer.</p>
+          <div className="quiz-options">
+            {interaction.quiz.options.map((option, index) => {
+              const isHovered = interaction.quiz.hoveredOptionId === option.id
+              const isSelected = interaction.quiz.selectedOptionId === option.id
+              const showCorrect =
+                interaction.quiz.answerResult === 'wrong' && option.isCorrect
+              const isWrongPick =
+                isSelected && interaction.quiz.answerResult === 'wrong'
+
+              const classes = [
+                'quiz-option',
+                isHovered ? 'hovered' : '',
+                isSelected ? 'selected' : '',
+                showCorrect ? 'correct' : '',
+                isWrongPick ? 'wrong' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')
+
+              return (
+                <div key={option.id} className={classes}>
+                  <span className="quiz-option-index">
+                    {String.fromCharCode(65 + index)}
+                  </span>
+                  <span>{option.label}</span>
+                </div>
+              )
+            })}
+          </div>
           {interaction.quiz.answerResult === 'correct' && (
             <p className="quiz-result correct">Correct lock acquired.</p>
           )}
@@ -114,8 +154,8 @@ export const HudOverlay = ({
 
       {interaction.phase === 'orbit' && (
         <section className="orbit-tip">
-          <p>Open palm to re-summon.</p>
-          <p>Swipe left/right to browse the menu, then pinch or point-hold to open an item.</p>
+          <p>Aim at an item in the menu lane.</p>
+          <p>Swipe left/right to browse menu, then hold open palm for 3 seconds to select.</p>
         </section>
       )}
 
@@ -130,28 +170,30 @@ export const HudOverlay = ({
           <div className="panel-title">Knowledge Core Unlocked</div>
           <h3>Unlock the full experience</h3>
           <div className="site-preview">
-            <div className="preview-header">Your Vocabulary Platform</div>
+            <div className="preview-header">Cày Từ Vựng Platform</div>
             <div className="preview-body">
               Adaptive lessons, spaced repetition, and real-time speaking drills.
             </div>
           </div>
           <a
             className="start-button"
-            href="https://your-vocabulary-platform.example"
+            href="https://caytuvung.site"
             target="_blank"
             rel="noreferrer"
           >
-            Start Learning
+            Vào Cày Từ Vựng
           </a>
         </section>
       )}
 
       <footer className="hud-footer">
         <span>Open Palm: summon</span>
+        <span>Hold open palm 3s: select focused item</span>
         <span>Pinch: select / confirm</span>
         <span>Swipe orbit: next / prev item</span>
         <span>Swipe detail: mode switch</span>
-        <span>Point: hover quiz answer</span>
+        <span>Pinch power: {pinchStrengthPercent}%</span>
+        <span>Palm power: {openPalmStrengthPercent}%</span>
         <span>Gesture stability: {(gestures.stability * 100).toFixed(0)}%</span>
       </footer>
     </div>

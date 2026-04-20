@@ -13,10 +13,10 @@ type HandSample = {
   point: Vec2
 }
 
-const OPEN_ENTER = 1.8
-const OPEN_EXIT = 1.56
-const PINCH_ENTER = 0.28
-const PINCH_EXIT = 0.38
+const OPEN_ENTER = 1.66
+const OPEN_EXIT = 1.42
+const PINCH_ENTER = 0.33
+const PINCH_EXIT = 0.43
 
 const SWIPE_MIN_VELOCITY = 1.2
 const SWIPE_COOLDOWN_MS = 420

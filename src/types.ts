@@ -71,6 +71,8 @@ export type WordNode = {
   example: string
   pronunciation: string
   icon: string
+  iconImageSrc?: string
+  launchUrl?: string
 }
 
 export type ExperienceModeId = 'vocabulary_hologram' | 'ai_core_cognitive_upgrade'

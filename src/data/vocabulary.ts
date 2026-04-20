@@ -1,6 +1,18 @@
 ﻿import type { WordNode } from '../types'
 
+const CAYTUVUNG_LOGO = new URL('../../logo.png', import.meta.url).href
+
 export const VOCABULARY_WORDS: WordNode[] = [
+  {
+    id: 'caytuvung-platform',
+    word: 'caytuvung.site',
+    meaning: 'Open the full Cay Tu Vung learning platform.',
+    example: 'Select this item to continue on the live learning website.',
+    pronunciation: '/keɪ-tu-vʌŋ-saɪt/',
+    icon: 'CV',
+    iconImageSrc: CAYTUVUNG_LOGO,
+    launchUrl: 'https://caytuvung.site',
+  },
   {
     id: 'quantum',
     word: 'Quantum',

@@ -131,6 +131,20 @@ canvas {
   background: radial-gradient(circle at center, transparent 56%, rgba(0, 0, 0, 0.34) 100%);
 }
 
+.app-shell.mode-hologram .scanlines {
+  opacity: 0.34;
+  background:
+    radial-gradient(circle at 28% 20%, rgba(101, 186, 255, 0.07), transparent 36%),
+    radial-gradient(circle at 74% 78%, rgba(67, 152, 255, 0.08), transparent 42%),
+    repeating-linear-gradient(
+      180deg,
+      rgba(180, 240, 255, 0.035) 0,
+      rgba(180, 240, 255, 0.035) 1px,
+      transparent 1px,
+      transparent 4px
+    );
+}
+
 .mode-switcher {
   pointer-events: auto;
   position: absolute;
@@ -451,6 +465,15 @@ canvas {
   line-height: 1.36;
 }
 
+.gateway-tip {
+  margin-top: 0.58rem !important;
+  padding: 0.44rem 0.56rem;
+  border-radius: 10px;
+  border: 1px solid rgba(130, 236, 255, 0.42);
+  background: linear-gradient(120deg, rgba(22, 80, 116, 0.48), rgba(9, 34, 53, 0.58));
+  color: #d8f7ff !important;
+}
+
 .panel-footer {
   margin-top: 0.92rem;
   display: flex;
@@ -458,6 +481,67 @@ canvas {
   gap: 0.75rem;
   color: var(--ink-dim);
   font-size: 0.84rem;
+}
+
+.quiz-options {
+  margin-top: 0.78rem;
+  display: grid;
+  gap: 0.48rem;
+}
+
+.quiz-option {
+  display: flex;
+  align-items: center;
+  gap: 0.62rem;
+  padding: 0.52rem 0.62rem;
+  border-radius: 11px;
+  border: 1px solid rgba(109, 211, 245, 0.26);
+  background: rgba(8, 23, 36, 0.56);
+  color: #c9eff8;
+  line-height: 1.28;
+  transition:
+    border-color 0.22s ease,
+    box-shadow 0.22s ease,
+    transform 0.22s ease;
+}
+
+.quiz-option-index {
+  width: 1.32rem;
+  height: 1.32rem;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  border: 1px solid rgba(138, 229, 255, 0.42);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Orbitron', 'Rajdhani', sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  color: #e1fcff;
+  background: rgba(28, 112, 156, 0.38);
+}
+
+.quiz-option.hovered {
+  border-color: rgba(149, 239, 255, 0.76);
+  box-shadow: 0 0 18px rgba(90, 212, 243, 0.22);
+  transform: translateX(1px);
+}
+
+.quiz-option.selected {
+  border-color: rgba(154, 240, 255, 0.84);
+  box-shadow: 0 0 20px rgba(93, 219, 244, 0.28);
+}
+
+.quiz-option.correct {
+  border-color: rgba(123, 255, 204, 0.72);
+  background: rgba(18, 67, 54, 0.62);
+  color: #d7fff1;
+}
+
+.quiz-option.wrong {
+  border-color: rgba(255, 137, 162, 0.72);
+  background: rgba(71, 19, 32, 0.62);
+  color: #ffe2e9;
 }
 
 .transition-left {

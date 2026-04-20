@@ -36,21 +36,21 @@ export const orbitNodePosition = (
   focusIndex = 0,
 ): Vec3 => {
   const offset = orbitMenuOffset(index, total, focusIndex)
-  const spacingX = 0.82
-  const lane = Math.sign(offset) * Math.pow(Math.abs(offset), 1.05)
-  const hoverWave = Math.sin(elapsedSeconds * 0.94 + index * 0.7) * 0.06
-  const depthOffset = -Math.abs(offset) * 0.24
+  const spacingX = 1.42
+  const lane = Math.sign(offset) * Math.pow(Math.abs(offset), 1.08)
+  const hoverWave = Math.sin(elapsedSeconds * 0.94 + index * 0.7) * 0.08
+  const depthOffset = -Math.abs(offset) * 0.44
 
   return {
     x: anchor.x + lane * spacingX,
-    y: anchor.y + hoverWave + Math.cos(offset * 0.85) * 0.045,
-    z: CORE_BASE_Z + depthOffset + Math.sin(elapsedSeconds * 1.15 + index) * 0.04,
+    y: anchor.y + hoverWave + Math.cos(offset * 0.85) * 0.08,
+    z: CORE_BASE_Z + depthOffset + Math.sin(elapsedSeconds * 1.15 + index) * 0.05,
   }
 }
 
 export const quizNodePositions = (anchor: Vec3): Vec3[] => [
-  { x: anchor.x - 0.95, y: anchor.y + 0.44, z: CORE_BASE_Z - 0.05 },
-  { x: anchor.x + 0.95, y: anchor.y + 0.44, z: CORE_BASE_Z - 0.05 },
-  { x: anchor.x - 0.95, y: anchor.y - 0.44, z: CORE_BASE_Z - 0.05 },
-  { x: anchor.x + 0.95, y: anchor.y - 0.44, z: CORE_BASE_Z - 0.05 },
+  { x: anchor.x - 1.28, y: anchor.y + 0.68, z: CORE_BASE_Z + 0.38 },
+  { x: anchor.x + 1.28, y: anchor.y + 0.68, z: CORE_BASE_Z + 0.38 },
+  { x: anchor.x - 1.28, y: anchor.y - 0.68, z: CORE_BASE_Z + 0.38 },
+  { x: anchor.x + 1.28, y: anchor.y - 0.68, z: CORE_BASE_Z + 0.38 },
 ]

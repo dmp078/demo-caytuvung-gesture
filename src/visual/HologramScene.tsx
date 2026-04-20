@@ -1,4 +1,4 @@
-﻿import { Text } from '@react-three/drei'
+﻿import { Text, useTexture } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
 import { useMemo, useRef } from 'react'
 import * as THREE from 'three'
@@ -24,51 +24,182 @@ const damp = (current: number, target: number, speed: number, delta: number) =>
 const copyVec3 = (vector: Vec3) => new THREE.Vector3(vector.x, vector.y, vector.z)
 
 const ParticleField = () => {
-  const pointsRef = useRef<THREE.Points>(null)
-  const { positions, alphas } = useMemo(() => {
-    const count = 320
-    const positionsBuffer = new Float32Array(count * 3)
-    const alphaBuffer = new Float32Array(count)
+  const nearRef = useRef<THREE.Points>(null)
+  const farRef = useRef<THREE.Points>(null)
+  const { nearPositions, nearAlphas, farPositions, farAlphas } = useMemo(() => {
+    const nearCount = 560
+    const farCount = 340
+    const nearPositionBuffer = new Float32Array(nearCount * 3)
+    const nearAlphaBuffer = new Float32Array(nearCount)
+    const farPositionBuffer = new Float32Array(farCount * 3)
+    const farAlphaBuffer = new Float32Array(farCount)
 
-    for (let index = 0; index < count; index += 1) {
-      const radius = 3 + Math.random() * 2.4
+    for (let index = 0; index < nearCount; index += 1) {
+      const radius = 2.8 + Math.random() * 2.9
       const theta = Math.random() * Math.PI * 2
-      const y = (Math.random() - 0.5) * 2.6
+      const y = (Math.random() - 0.5) * 3.2
 
-      positionsBuffer[index * 3] = Math.cos(theta) * radius
-      positionsBuffer[index * 3 + 1] = y
-      positionsBuffer[index * 3 + 2] = -4 + Math.sin(theta * 2) * 1.8
-      alphaBuffer[index] = 0.2 + Math.random() * 0.8
+      nearPositionBuffer[index * 3] = Math.cos(theta) * radius
+      nearPositionBuffer[index * 3 + 1] = y
+      nearPositionBuffer[index * 3 + 2] = -3.9 + Math.sin(theta * 2.3) * 2.2
+      nearAlphaBuffer[index] = 0.2 + Math.random() * 0.8
     }
 
-    return { positions: positionsBuffer, alphas: alphaBuffer }
+    for (let index = 0; index < farCount; index += 1) {
+      const radius = 4.8 + Math.random() * 3.2
+      const theta = Math.random() * Math.PI * 2
+      const y = (Math.random() - 0.5) * 4.6
+
+      farPositionBuffer[index * 3] = Math.cos(theta) * radius
+      farPositionBuffer[index * 3 + 1] = y
+      farPositionBuffer[index * 3 + 2] = -6.7 + Math.sin(theta * 1.7) * 2.6
+      farAlphaBuffer[index] = 0.18 + Math.random() * 0.58
+    }
+
+    return {
+      nearPositions: nearPositionBuffer,
+      nearAlphas: nearAlphaBuffer,
+      farPositions: farPositionBuffer,
+      farAlphas: farAlphaBuffer,
+    }
   }, [])
 
   useFrame((state) => {
-    if (!pointsRef.current) {
-      return
+    if (nearRef.current) {
+      nearRef.current.rotation.y = state.clock.elapsedTime * 0.052
+      nearRef.current.rotation.x = Math.sin(state.clock.elapsedTime * 0.26) * 0.08
     }
 
-    pointsRef.current.rotation.y = state.clock.elapsedTime * 0.045
-    pointsRef.current.rotation.x = Math.sin(state.clock.elapsedTime * 0.23) * 0.08
+    if (farRef.current) {
+      farRef.current.rotation.y = -state.clock.elapsedTime * 0.018
+      farRef.current.rotation.x = Math.sin(state.clock.elapsedTime * 0.11) * 0.04
+    }
   })
 
   return (
-    <points ref={pointsRef}>
-      <bufferGeometry>
-        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
-        <bufferAttribute attach="attributes-alpha" args={[alphas, 1]} />
-      </bufferGeometry>
-      <pointsMaterial
-        color="#5ddfff"
-        size={0.03}
-        sizeAttenuation
-        transparent
-        opacity={0.52}
-        depthWrite={false}
-        blending={THREE.AdditiveBlending}
-      />
-    </points>
+    <group>
+      <points ref={farRef}>
+        <bufferGeometry>
+          <bufferAttribute attach="attributes-position" args={[farPositions, 3]} />
+          <bufferAttribute attach="attributes-alpha" args={[farAlphas, 1]} />
+        </bufferGeometry>
+        <pointsMaterial
+          color="#448fda"
+          size={0.03}
+          sizeAttenuation
+          transparent
+          opacity={0.4}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+        />
+      </points>
+      <points ref={nearRef}>
+        <bufferGeometry>
+          <bufferAttribute attach="attributes-position" args={[nearPositions, 3]} />
+          <bufferAttribute attach="attributes-alpha" args={[nearAlphas, 1]} />
+        </bufferGeometry>
+        <pointsMaterial
+          color="#73e9ff"
+          size={0.048}
+          sizeAttenuation
+          transparent
+          opacity={0.64}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+        />
+      </points>
+    </group>
+  )
+}
+
+const GalaxyAura = () => {
+  const groupRef = useRef<THREE.Group>(null)
+  const swirlRef = useRef<THREE.Mesh>(null)
+  const innerRingRef = useRef<THREE.Mesh>(null)
+
+  useFrame((state) => {
+    if (!groupRef.current) {
+      return
+    }
+
+    groupRef.current.rotation.z = Math.sin(state.clock.elapsedTime * 0.16) * 0.07
+    groupRef.current.rotation.y = state.clock.elapsedTime * 0.025
+
+    if (swirlRef.current) {
+      swirlRef.current.rotation.z = -state.clock.elapsedTime * 0.08
+      swirlRef.current.scale.setScalar(1 + Math.sin(state.clock.elapsedTime * 0.7) * 0.05)
+    }
+
+    if (innerRingRef.current) {
+      innerRingRef.current.rotation.z = state.clock.elapsedTime * 0.04
+      const pulse = 1 + Math.sin(state.clock.elapsedTime * 1.1) * 0.04
+      innerRingRef.current.scale.setScalar(pulse)
+    }
+  })
+
+  return (
+    <group ref={groupRef}>
+      <mesh ref={swirlRef} position={[-1.6, 1.3, -5.6]} rotation={[0.1, 0.3, 0.4]}>
+        <planeGeometry args={[3.8, 2.2]} />
+        <meshBasicMaterial
+          color="#2e6aa6"
+          transparent
+          opacity={0.18}
+          blending={THREE.AdditiveBlending}
+          depthWrite={false}
+        />
+      </mesh>
+      <mesh position={[2.1, -1.2, -5.8]} rotation={[-0.1, -0.34, -0.2]}>
+        <planeGeometry args={[4.6, 2.4]} />
+        <meshBasicMaterial
+          color="#1f4f86"
+          transparent
+          opacity={0.14}
+          blending={THREE.AdditiveBlending}
+          depthWrite={false}
+        />
+      </mesh>
+      <mesh position={[0.2, 0, -6.2]} rotation={[Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[2.4, 2.48, 160]} />
+        <meshBasicMaterial
+          color="#4eb4ff"
+          transparent
+          opacity={0.24}
+          blending={THREE.AdditiveBlending}
+          depthWrite={false}
+        />
+      </mesh>
+      <mesh position={[0.2, 0, -6.35]} rotation={[Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[3.45, 3.5, 180]} />
+        <meshBasicMaterial
+          color="#2e78bf"
+          transparent
+          opacity={0.16}
+          blending={THREE.AdditiveBlending}
+          depthWrite={false}
+        />
+      </mesh>
+      <mesh ref={innerRingRef} position={[0.15, 0.08, -4.9]} rotation={[Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[1.18, 1.25, 144]} />
+        <meshBasicMaterial
+          color="#83e8ff"
+          transparent
+          opacity={0.23}
+          blending={THREE.AdditiveBlending}
+          depthWrite={false}
+        />
+      </mesh>
+      <mesh position={[-2.45, -0.9, -5.9]} rotation={[0.2, 0.35, 0.3]}>
+        <planeGeometry args={[2.9, 1.9]} />
+        <meshBasicMaterial
+          color="#2b5f9f"
+          transparent
+          opacity={0.11}
+          blending={THREE.AdditiveBlending}
+          depthWrite={false}
+        />
+      </mesh>
+    </group>
   )
 }
 
@@ -174,7 +305,7 @@ const CoreField = ({ interaction }: CoreFieldProps) => {
   return (
     <group ref={groupRef}>
       <mesh>
-        <icosahedronGeometry args={[0.18, 2]} />
+        <icosahedronGeometry args={[0.24, 2]} />
         <meshStandardMaterial
           color="#69e7ff"
           emissive="#2bc6ff"
@@ -186,7 +317,7 @@ const CoreField = ({ interaction }: CoreFieldProps) => {
         />
       </mesh>
       <mesh ref={pulseRef} rotation={[Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[0.4, 0.01, 12, 72]} />
+        <torusGeometry args={[0.52, 0.012, 12, 72]} />
         <meshBasicMaterial
           color="#84edff"
           transparent
@@ -195,7 +326,7 @@ const CoreField = ({ interaction }: CoreFieldProps) => {
         />
       </mesh>
       <mesh rotation={[Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[0.62, 0.006, 12, 96]} />
+        <torusGeometry args={[0.78, 0.007, 12, 96]} />
         <meshBasicMaterial
           color="#36d9ff"
           transparent
@@ -232,16 +363,26 @@ const OrbitWord = ({ index, total, word, interaction }: OrbitWordProps) => {
       interaction.orbitFocusIndex,
     )
     let targetPosition = orbit
-    let targetScale = Math.max(0.64, 1.12 - Math.abs(menuOffset) * 0.16)
+    let targetScale = Math.max(1.02, 1.86 - Math.abs(menuOffset) * 0.16)
 
     const isSelected = interaction.selectedWordId === word.id
 
-    if (interaction.phase === 'detail' || interaction.phase === 'quiz') {
+    if (interaction.phase === 'detail') {
       if (isSelected) {
         targetPosition = { x: 0, y: 0.18, z: -1.7 }
-        targetScale = 1.65
+        targetScale = 2.34
       } else {
         targetPosition = { x: orbit.x, y: orbit.y, z: orbit.z - 1.2 }
+        targetScale = 0.86
+      }
+    }
+
+    if (interaction.phase === 'quiz') {
+      if (isSelected) {
+        targetPosition = { x: 0, y: 0.94, z: -2.12 }
+        targetScale = 1.12
+      } else {
+        targetPosition = { x: orbit.x * 0.88, y: orbit.y + 0.24, z: orbit.z - 1.85 }
         targetScale = 0.58
       }
     }
@@ -284,7 +425,7 @@ const OrbitWord = ({ index, total, word, interaction }: OrbitWordProps) => {
   return (
     <group ref={groupRef}>
       <mesh ref={sphereRef}>
-        <sphereGeometry args={[0.12, 24, 24]} />
+        <sphereGeometry args={[0.24, 28, 28]} />
         <meshStandardMaterial
           color={interaction.hoveredWordId === word.id ? '#95f6ff' : '#4fd6ff'}
           emissive={interaction.hoveredWordId === word.id ? '#72ecff' : '#2eaed2'}
@@ -295,26 +436,61 @@ const OrbitWord = ({ index, total, word, interaction }: OrbitWordProps) => {
           opacity={0.9}
         />
       </mesh>
+      <WordGlyph word={word} />
       <Text
-        position={[0, 0, 0.16]}
-        fontSize={0.09}
-        color="#c6f8ff"
-        anchorX="center"
-        anchorY="middle"
-      >
-        {word.icon}
-      </Text>
-      <Text
-        position={[0, -0.23, 0.05]}
-        fontSize={0.065}
+        position={[0, -0.46, 0.05]}
+        fontSize={0.11}
         color="#88eaff"
         anchorX="center"
         anchorY="middle"
-        maxWidth={1.2}
+        maxWidth={2.4}
       >
         {shouldShowLabel ? word.word : ''}
       </Text>
     </group>
+  )
+}
+
+type WordGlyphProps = {
+  word: WordNode
+}
+
+const WordGlyph = ({ word }: WordGlyphProps) => {
+  if (word.iconImageSrc) {
+    return <WordLogo src={word.iconImageSrc} />
+  }
+
+  return (
+    <Text
+      position={[0, 0, 0.16]}
+      fontSize={0.16}
+      color="#c6f8ff"
+      anchorX="center"
+      anchorY="middle"
+    >
+      {word.icon}
+    </Text>
+  )
+}
+
+type WordLogoProps = {
+  src: string
+}
+
+const WordLogo = ({ src }: WordLogoProps) => {
+  const texture = useTexture(src)
+
+  return (
+    <mesh position={[0, 0, 0.17]}>
+      <planeGeometry args={[0.38, 0.38]} />
+      <meshBasicMaterial
+        map={texture}
+        transparent
+        opacity={0.95}
+        blending={THREE.AdditiveBlending}
+        depthWrite={false}
+      />
+    </mesh>
   )
 }
 
@@ -350,7 +526,7 @@ const QuizNode = ({ option, index, interaction }: QuizNodeProps) => {
       interaction.quiz.answerResult === 'wrong' &&
       option.isCorrect
 
-    const baseScale = isSelected ? 1.14 : isHovered ? 1.06 : 1
+    const baseScale = isSelected ? 1.3 : isHovered ? 1.18 : 1
     groupRef.current.scale.setScalar(damp(groupRef.current.scale.x, baseScale, 12, delta))
 
     if (meshRef.current) {
@@ -372,12 +548,12 @@ const QuizNode = ({ option, index, interaction }: QuizNodeProps) => {
     }
   })
 
-  const shortened = option.label.length > 58 ? `${option.label.slice(0, 58)}…` : option.label
+  const shortened = option.label.length > 46 ? `${option.label.slice(0, 46)}…` : option.label
 
   return (
     <group ref={groupRef}>
       <mesh ref={meshRef}>
-        <icosahedronGeometry args={[0.2, 1]} />
+        <icosahedronGeometry args={[0.32, 1]} />
         <meshStandardMaterial
           color="#4cd4ff"
           emissive="#34b7e3"
@@ -386,15 +562,155 @@ const QuizNode = ({ option, index, interaction }: QuizNodeProps) => {
           opacity={0.9}
         />
       </mesh>
+      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, -0.03]}>
+        <torusGeometry args={[0.46, 0.013, 12, 80]} />
+        <meshBasicMaterial
+          color="#8aedff"
+          transparent
+          opacity={0.34}
+          blending={THREE.AdditiveBlending}
+          depthWrite={false}
+        />
+      </mesh>
       <Text
-        position={[0, -0.4, 0]}
-        fontSize={0.08}
-        maxWidth={1.45}
+        position={[0, -0.62, 0]}
+        fontSize={0.12}
+        maxWidth={2.35}
         color="#bdf8ff"
         anchorX="center"
         anchorY="middle"
       >
         {shortened}
+      </Text>
+    </group>
+  )
+}
+
+type PlatformGatewayEffectProps = {
+  active: boolean
+}
+
+const PlatformGatewayEffect = ({ active }: PlatformGatewayEffectProps) => {
+  const groupRef = useRef<THREE.Group>(null)
+  const beamRef = useRef<THREE.Mesh>(null)
+  const innerRingRef = useRef<THREE.Mesh>(null)
+  const outerRingRef = useRef<THREE.Mesh>(null)
+  const sparkleRef = useRef<THREE.Points>(null)
+
+  const sparkles = useMemo(() => {
+    const count = 210
+    const positions = new Float32Array(count * 3)
+
+    for (let index = 0; index < count; index += 1) {
+      const radius = 0.72 + Math.random() * 0.82
+      const theta = Math.random() * Math.PI * 2
+      const y = (Math.random() - 0.5) * 1.3
+
+      positions[index * 3] = Math.cos(theta) * radius
+      positions[index * 3 + 1] = y
+      positions[index * 3 + 2] = Math.sin(theta * 1.55) * 0.26
+    }
+
+    return positions
+  }, [])
+
+  useFrame((state, delta) => {
+    if (!groupRef.current) {
+      return
+    }
+
+    const visibility = active ? 1 : 0
+    const targetScale = Math.max(0.001, visibility)
+
+    groupRef.current.position.x = damp(groupRef.current.position.x, 0, 8, delta)
+    groupRef.current.position.y = damp(groupRef.current.position.y, active ? 0.23 : -0.4, 8, delta)
+    groupRef.current.position.z = damp(groupRef.current.position.z, -1.68, 8, delta)
+    groupRef.current.scale.setScalar(damp(groupRef.current.scale.x, targetScale, 8, delta))
+
+    if (beamRef.current) {
+      const beamMaterial = beamRef.current.material as THREE.MeshBasicMaterial
+      beamMaterial.opacity = damp(beamMaterial.opacity, active ? 0.28 : 0, 7, delta)
+    }
+
+    if (innerRingRef.current) {
+      innerRingRef.current.rotation.z = state.clock.elapsedTime * 0.75
+      const innerMaterial = innerRingRef.current.material as THREE.MeshBasicMaterial
+      innerMaterial.opacity = damp(innerMaterial.opacity, active ? 0.62 : 0, 8, delta)
+      const pulse = 1 + Math.sin(state.clock.elapsedTime * 2.5) * 0.08
+      innerRingRef.current.scale.setScalar(pulse)
+    }
+
+    if (outerRingRef.current) {
+      outerRingRef.current.rotation.z = -state.clock.elapsedTime * 0.52
+      const outerMaterial = outerRingRef.current.material as THREE.MeshBasicMaterial
+      outerMaterial.opacity = damp(outerMaterial.opacity, active ? 0.34 : 0, 8, delta)
+      const pulse = 1 + Math.sin(state.clock.elapsedTime * 1.7 + Math.PI * 0.45) * 0.06
+      outerRingRef.current.scale.setScalar(pulse)
+    }
+
+    if (sparkleRef.current) {
+      sparkleRef.current.rotation.y = state.clock.elapsedTime * 0.22
+      sparkleRef.current.rotation.x = Math.sin(state.clock.elapsedTime * 0.35) * 0.06
+      const sparkleMaterial = sparkleRef.current.material as THREE.PointsMaterial
+      sparkleMaterial.opacity = damp(sparkleMaterial.opacity, active ? 0.9 : 0, 7, delta)
+    }
+  })
+
+  return (
+    <group ref={groupRef} scale={[0.001, 0.001, 0.001]}>
+      <mesh ref={beamRef} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.42, 0.84, 1.7, 38, 1, true]} />
+        <meshBasicMaterial
+          color="#61ddff"
+          transparent
+          opacity={0}
+          side={THREE.DoubleSide}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+        />
+      </mesh>
+      <mesh ref={innerRingRef} rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0.08]}>
+        <torusGeometry args={[0.98, 0.03, 18, 132]} />
+        <meshBasicMaterial
+          color="#89f1ff"
+          transparent
+          opacity={0}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+        />
+      </mesh>
+      <mesh ref={outerRingRef} rotation={[Math.PI / 2, 0, 0]} position={[0, 0, -0.06]}>
+        <torusGeometry args={[1.24, 0.018, 16, 148]} />
+        <meshBasicMaterial
+          color="#41c4ff"
+          transparent
+          opacity={0}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+        />
+      </mesh>
+      <points ref={sparkleRef}>
+        <bufferGeometry>
+          <bufferAttribute attach="attributes-position" args={[sparkles, 3]} />
+        </bufferGeometry>
+        <pointsMaterial
+          color="#b5f7ff"
+          size={0.034}
+          sizeAttenuation
+          transparent
+          opacity={0}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+        />
+      </points>
+      <Text
+        position={[0, -1.08, 0.16]}
+        fontSize={0.115}
+        color="#ddf9ff"
+        anchorX="center"
+        anchorY="middle"
+      >
+        CAY TU VUNG GATEWAY
       </Text>
     </group>
   )
@@ -515,6 +831,9 @@ export const HologramScene = ({
   transparentBackground = false,
 }: HologramSceneProps) => {
   const showQuiz = interaction.phase === 'quiz'
+  const selectedWord = words.find((word) => word.id === interaction.selectedWordId) ?? null
+  const showPlatformGatewayEffect =
+    interaction.phase === 'detail' && Boolean(selectedWord?.launchUrl)
 
   return (
     <>
@@ -526,9 +845,11 @@ export const HologramScene = ({
       <pointLight position={[0, -1.2, -2.8]} intensity={7} color="#2a8cb4" distance={6} />
 
       <GridAura />
+      <GalaxyAura />
       <ParticleField />
 
       <CoreField interaction={interaction} />
+      <PlatformGatewayEffect active={showPlatformGatewayEffect} />
 
       {words.map((word, index) => (
         <OrbitWord

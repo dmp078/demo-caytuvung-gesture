@@ -67,7 +67,7 @@ const createQuizForWord = (words: WordNode[], promptWordId: string): QuizState =
 const headlineByPhase: Record<InteractionState['phase'], string> = {
   awaiting_hand: 'Raise your hand to initialize the hologram',
   summoning: 'Energy core calibrating',
-  orbit: 'Pinch a node to inspect vocabulary',
+  orbit: 'Swipe left/right to browse menu, pinch to open',
   detail: 'Swipe left/right/up to switch training modes',
   quiz: 'Point to an answer and pinch to confirm',
   finale: 'Knowledge core synchronized',
@@ -100,6 +100,7 @@ export const useInteractionController = (
   const [state, setState] = useState<InteractionState>({
     phase: 'awaiting_hand',
     detailMode: 'meaning',
+    orbitFocusIndex: 0,
     selectedWordId: null,
     hoveredWordId: null,
     reticleWorld: defaultWorld,
@@ -175,13 +176,29 @@ export const useInteractionController = (
       }
 
       if (next.phase === 'orbit') {
+        if (gestures.swipeEvent?.direction === 'left') {
+          next.orbitFocusIndex = (previous.orbitFocusIndex + 1 + words.length) % words.length
+          next.interactionCount += 1
+        } else if (gestures.swipeEvent?.direction === 'right') {
+          next.orbitFocusIndex = (previous.orbitFocusIndex - 1 + words.length) % words.length
+          next.interactionCount += 1
+        } else {
+          next.orbitFocusIndex = previous.orbitFocusIndex
+        }
+
         const elapsedSeconds = now / 1000
         const hoveredWord = words
           .map((word, index) => ({
             id: word.id,
             distance: distance3(
               next.reticleWorld,
-              orbitNodePosition(index, words.length, elapsedSeconds, next.anchorWorld),
+              orbitNodePosition(
+                index,
+                words.length,
+                elapsedSeconds,
+                next.anchorWorld,
+                next.orbitFocusIndex,
+              ),
             ),
           }))
           .sort((left, right) => left.distance - right.distance)[0]
@@ -205,6 +222,10 @@ export const useInteractionController = (
           hoveredWordId
         ) {
           next.selectedWordId = hoveredWordId
+          const selectedIndex = words.findIndex((word) => word.id === hoveredWordId)
+          if (selectedIndex >= 0) {
+            next.orbitFocusIndex = selectedIndex
+          }
           next.phase = 'detail'
           next.detailMode = 'meaning'
           next.interactionCount += 1

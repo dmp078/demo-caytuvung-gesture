@@ -4,7 +4,7 @@ import { useMemo, useRef } from 'react'
 import * as THREE from 'three'
 import type { GestureSnapshot, InteractionState, QuizOption, Vec3, WordNode } from '../types'
 import { lerp } from '../utils/math'
-import { CORE_BASE_Z, orbitNodePosition, quizNodePositions } from './layout'
+import { CORE_BASE_Z, orbitMenuOffset, orbitNodePosition, quizNodePositions } from './layout'
 
 type HologramSceneProps = {
   interaction: InteractionState
@@ -223,9 +223,16 @@ const OrbitWord = ({ index, total, word, interaction }: OrbitWordProps) => {
       return
     }
 
-    const orbit = orbitNodePosition(index, total, state.clock.elapsedTime, interaction.anchorWorld)
+    const menuOffset = orbitMenuOffset(index, total, interaction.orbitFocusIndex)
+    const orbit = orbitNodePosition(
+      index,
+      total,
+      state.clock.elapsedTime,
+      interaction.anchorWorld,
+      interaction.orbitFocusIndex,
+    )
     let targetPosition = orbit
-    let targetScale = 1
+    let targetScale = Math.max(0.64, 1.12 - Math.abs(menuOffset) * 0.16)
 
     const isSelected = interaction.selectedWordId === word.id
 
@@ -252,9 +259,14 @@ const OrbitWord = ({ index, total, word, interaction }: OrbitWordProps) => {
     if (sphereRef.current) {
       const material = sphereRef.current.material as THREE.MeshStandardMaterial
       const hovered = interaction.hoveredWordId === word.id
-      const boost = hovered ? 2.8 : isSelected ? 3.4 : 1.8
+      const boost = hovered ? 2.8 : isSelected ? 3.4 : 1.5 + Math.max(0, 0.7 - Math.abs(menuOffset) * 0.18)
       material.emissiveIntensity = damp(material.emissiveIntensity, boost, 10, delta)
-      material.opacity = damp(material.opacity, isSelected ? 1 : 0.88, 7, delta)
+      material.opacity = damp(
+        material.opacity,
+        isSelected ? 1 : Math.max(0.45, 0.92 - Math.abs(menuOffset) * 0.12),
+        7,
+        delta,
+      )
     }
   })
 
@@ -264,6 +276,10 @@ const OrbitWord = ({ index, total, word, interaction }: OrbitWordProps) => {
   if (!isVisible) {
     return null
   }
+
+  const menuOffset = orbitMenuOffset(index, total, interaction.orbitFocusIndex)
+  const shouldShowLabel =
+    Math.abs(menuOffset) <= 2 || interaction.hoveredWordId === word.id || interaction.selectedWordId === word.id
 
   return (
     <group ref={groupRef}>
@@ -296,7 +312,7 @@ const OrbitWord = ({ index, total, word, interaction }: OrbitWordProps) => {
         anchorY="middle"
         maxWidth={1.2}
       >
-        {word.word}
+        {shouldShowLabel ? word.word : ''}
       </Text>
     </group>
   )

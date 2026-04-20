@@ -111,6 +111,7 @@ export type QuizState = {
 export type InteractionState = {
   phase: DemoPhase
   detailMode: DetailMode
+  orbitFocusIndex: number
   selectedWordId: string | null
   hoveredWordId: string | null
   reticleWorld: Vec3

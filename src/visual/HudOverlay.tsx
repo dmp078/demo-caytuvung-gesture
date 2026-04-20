@@ -115,7 +115,7 @@ export const HudOverlay = ({
       {interaction.phase === 'orbit' && (
         <section className="orbit-tip">
           <p>Open palm to re-summon.</p>
-          <p>Pinch a glowing node to inspect vocabulary details.</p>
+          <p>Swipe left/right to browse the menu, then pinch or point-hold to open an item.</p>
         </section>
       )}
 
@@ -149,7 +149,8 @@ export const HudOverlay = ({
       <footer className="hud-footer">
         <span>Open Palm: summon</span>
         <span>Pinch: select / confirm</span>
-        <span>Swipe: mode switch</span>
+        <span>Swipe orbit: next / prev item</span>
+        <span>Swipe detail: mode switch</span>
         <span>Point: hover quiz answer</span>
         <span>Gesture stability: {(gestures.stability * 100).toFixed(0)}%</span>
       </footer>

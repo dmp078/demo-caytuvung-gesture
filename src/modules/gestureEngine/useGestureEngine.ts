@@ -13,13 +13,13 @@ type HandSample = {
   point: Vec2
 }
 
-const OPEN_ENTER = 1.86
-const OPEN_EXIT = 1.62
-const PINCH_ENTER = 0.24
-const PINCH_EXIT = 0.34
+const OPEN_ENTER = 1.8
+const OPEN_EXIT = 1.56
+const PINCH_ENTER = 0.28
+const PINCH_EXIT = 0.38
 
-const SWIPE_MIN_VELOCITY = 1.7
-const SWIPE_COOLDOWN_MS = 540
+const SWIPE_MIN_VELOCITY = 1.2
+const SWIPE_COOLDOWN_MS = 420
 const SWIPE_WINDOW_MS = 250
 
 const updateGate = (
@@ -158,36 +158,36 @@ export const useGestureEngine = (frame: HandFrame | null): GestureSnapshot => {
       openGateRef.current,
       frame.openness > OPEN_ENTER && frame.pinchDistance > 0.42,
       frame.openness < OPEN_EXIT || frame.pinchDistance < 0.3,
-      3,
-      3,
+      2,
+      2,
     )
 
     const pinchPhase = updateGate(
       pinchGateRef.current,
       frame.pinchDistance < PINCH_ENTER,
       frame.pinchDistance > PINCH_EXIT,
-      2,
+      1,
       2,
     )
 
     const shouldEnterPointing =
       frame.fingerExtensions.index > 1.85 &&
-      frame.fingerExtensions.middle < 1.62 &&
-      frame.fingerExtensions.ring < 1.56 &&
-      frame.fingerExtensions.pinky < 1.52 &&
+      frame.fingerExtensions.middle < 1.7 &&
+      frame.fingerExtensions.ring < 1.64 &&
+      frame.fingerExtensions.pinky < 1.6 &&
       frame.pinchDistance > 0.26
 
     const shouldExitPointing =
-      frame.fingerExtensions.index < 1.62 ||
-      frame.fingerExtensions.middle > 1.73 ||
-      frame.fingerExtensions.ring > 1.7 ||
-      frame.fingerExtensions.pinky > 1.68
+      frame.fingerExtensions.index < 1.55 ||
+      frame.fingerExtensions.middle > 1.8 ||
+      frame.fingerExtensions.ring > 1.78 ||
+      frame.fingerExtensions.pinky > 1.76
 
     const pointPhase = updateGate(
       pointGateRef.current,
       shouldEnterPointing,
       shouldExitPointing,
-      3,
+      2,
       3,
     )
 
@@ -227,13 +227,13 @@ export const useGestureEngine = (frame: HandFrame | null): GestureSnapshot => {
     }
 
     setSnapshot((previous) => {
-      const smoothedPointer = lerpVec2(previous.pointer, frame.pointer, 0.25)
+      const smoothedPointer = lerpVec2(previous.pointer, frame.pointer, 0.42)
       const rawVelocity = {
         x: (smoothedPointer.x - previous.pointer.x) / dt,
         y: (smoothedPointer.y - previous.pointer.y) / dt,
       }
 
-      const smoothedVelocity = lerpVec2(previous.pointerVelocity, rawVelocity, 0.22)
+      const smoothedVelocity = lerpVec2(previous.pointerVelocity, rawVelocity, 0.3)
       const stability = clamp(1 - magnitude2(smoothedVelocity) * 0.08, 0, 1)
 
       return {

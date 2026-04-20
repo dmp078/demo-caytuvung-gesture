@@ -7,8 +7,8 @@ import {
 import type { HandFrame, Vec3, UseHandTrackingResult } from '../../types'
 import { averageVec3, distance3, lerpVec3 } from '../../utils/math'
 
-const TARGET_DETECTION_FPS = 20
-const SMOOTHING_ALPHA = 0.42
+const TARGET_DETECTION_FPS = 28
+const SMOOTHING_ALPHA = 0.58
 const MODEL_ASSET_PATH =
   'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task'
 const WASM_BASE_PATH =

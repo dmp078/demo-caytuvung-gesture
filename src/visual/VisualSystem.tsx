@@ -41,12 +41,17 @@ export const VisualSystem = ({
   <div className={`app-shell ${activeMode === 'ai_core_cognitive_upgrade' ? 'mode-core' : 'mode-hologram'}`}>
     <Canvas
       camera={{ position: [0, 0, 3.3], fov: 44, near: 0.1, far: 40 }}
-      gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
+      gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
       dpr={[1, 1.5]}
       performance={{ min: 0.7 }}
     >
       {activeMode === 'vocabulary_hologram' ? (
-        <HologramScene interaction={interaction} gestures={gestures} words={words} />
+        <HologramScene
+          interaction={interaction}
+          gestures={gestures}
+          words={words}
+          transparentBackground
+        />
       ) : (
         <AICoreScene core={aiCore} words={words} />
       )}
@@ -77,7 +82,9 @@ export const VisualSystem = ({
 
     <video
       ref={videoRef}
-      className={`camera-feed ${activeMode === 'ai_core_cognitive_upgrade' ? 'hidden' : ''}`}
+      className={`camera-feed ${
+        activeMode === 'vocabulary_hologram' ? 'fullscreen' : 'hidden'
+      }`}
       autoPlay
       muted
       playsInline

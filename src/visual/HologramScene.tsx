@@ -10,6 +10,7 @@ type HologramSceneProps = {
   interaction: InteractionState
   gestures: GestureSnapshot
   words: WordNode[]
+  transparentBackground?: boolean
 }
 
 const holoColor = new THREE.Color('#65e7ff')
@@ -491,12 +492,17 @@ const GridAura = () => {
   )
 }
 
-export const HologramScene = ({ interaction, gestures, words }: HologramSceneProps) => {
+export const HologramScene = ({
+  interaction,
+  gestures,
+  words,
+  transparentBackground = false,
+}: HologramSceneProps) => {
   const showQuiz = interaction.phase === 'quiz'
 
   return (
     <>
-      <color attach="background" args={['#020912']} />
+      {!transparentBackground && <color attach="background" args={['#020912']} />}
       <fog attach="fog" args={['#020912', 6, 14]} />
 
       <ambientLight intensity={0.22} color="#74d8ff" />

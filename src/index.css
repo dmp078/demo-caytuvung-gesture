@@ -38,6 +38,7 @@ body {
   position: relative;
   width: 100%;
   height: 100%;
+  isolation: isolate;
 }
 
 .app-shell.mode-core {
@@ -48,6 +49,8 @@ body {
 }
 
 canvas {
+  position: relative;
+  z-index: 2;
   width: 100% !important;
   height: 100% !important;
 }
@@ -57,6 +60,7 @@ canvas {
   pointer-events: none;
   position: absolute;
   inset: 0;
+  z-index: 3;
 }
 
 .scanlines {
@@ -100,6 +104,7 @@ canvas {
   opacity: 0.34;
   filter: saturate(1.18) contrast(1.05);
   box-shadow: 0 0 24px rgba(60, 184, 224, 0.5);
+  z-index: 1;
 }
 
 .camera-feed.hidden {
@@ -108,12 +113,30 @@ canvas {
   pointer-events: none;
 }
 
+.camera-feed.fullscreen {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  right: auto;
+  bottom: auto;
+  border: 0;
+  border-radius: 0;
+  opacity: 0.92;
+  box-shadow: none;
+  filter: saturate(1.08) contrast(1.04) brightness(0.82);
+  mix-blend-mode: normal;
+}
+
+.app-shell.mode-hologram .vignette {
+  background: radial-gradient(circle at center, transparent 56%, rgba(0, 0, 0, 0.34) 100%);
+}
+
 .mode-switcher {
   pointer-events: auto;
   position: absolute;
   top: 0.9rem;
   right: 1rem;
-  z-index: 10;
+  z-index: 7;
   width: min(380px, calc(100% - 2rem));
   border-radius: 16px;
   border: 1px solid rgba(126, 223, 255, 0.3);
@@ -200,6 +223,7 @@ canvas {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  z-index: 6;
 }
 
 .hud-topbar {

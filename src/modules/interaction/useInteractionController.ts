@@ -10,10 +10,13 @@ import { distance3, lerpVec3 } from '../../utils/math'
 import { orbitNodePosition, pointerToWorld, quizNodePositions } from '../../visual/layout'
 
 const MODE_TRANSITION_DURATION_MS = 520
-const SUMMON_DURATION_MS = 1500
+const SUMMON_DURATION_MS = 900
 const QUIZ_FEEDBACK_DURATION_MS = 1300
 const FINALE_COLLAPSE_MS = 1500
 const FINALE_OPEN_MS = 1200
+const DIRECT_WORD_SELECT_DWELL_MS = 280
+const DIRECT_QUIZ_SELECT_DWELL_MS = 320
+const DIRECT_SELECT_COOLDOWN_MS = 420
 
 const createEmptyQuiz = (): QuizState => ({
   promptWordId: null,
@@ -84,6 +87,11 @@ const allMilestonesCompleted = (milestones: Milestones) =>
   milestones.quizAnswered
 
 const defaultWorld = pointerToWorld(0.5, 0.5)
+const centerBiasTarget = (pointerX: number, pointerY: number) =>
+  pointerToWorld(
+    0.5 + (pointerX - 0.5) * 0.18,
+    0.5 + (pointerY - 0.5) * 0.18,
+  )
 
 export const useInteractionController = (
   gestures: GestureSnapshot,
@@ -106,6 +114,9 @@ export const useInteractionController = (
   const summonStartedAtRef = useRef(0)
   const quizAnsweredAtRef = useRef(0)
   const finaleStartedAtRef = useRef(0)
+  const hoveredWordSinceRef = useRef(0)
+  const hoveredQuizSinceRef = useRef(0)
+  const lastDirectSelectAtRef = useRef(0)
   const milestonesRef = useRef<Milestones>({
     summoned: false,
     selectedWord: false,
@@ -119,7 +130,8 @@ export const useInteractionController = (
     const now = frame?.timestamp ?? performance.now()
 
     const reticleTarget = pointerToWorld(gestures.pointer.x, gestures.pointer.y)
-    anchorRef.current = lerpVec3(anchorRef.current, reticleTarget, gestures.hasHand ? 0.18 : 0.08)
+    const anchorTarget = centerBiasTarget(gestures.pointer.x, gestures.pointer.y)
+    anchorRef.current = lerpVec3(anchorRef.current, anchorTarget, gestures.hasHand ? 0.12 : 0.06)
 
     setState((previous) => {
       const next = {
@@ -174,14 +186,30 @@ export const useInteractionController = (
           }))
           .sort((left, right) => left.distance - right.distance)[0]
 
-        next.hoveredWordId = hoveredWord && hoveredWord.distance < 0.44 ? hoveredWord.id : null
+        const hoveredWordId = hoveredWord && hoveredWord.distance < 0.58 ? hoveredWord.id : null
+        if (hoveredWordId !== previous.hoveredWordId) {
+          hoveredWordSinceRef.current = now
+        }
+        next.hoveredWordId = hoveredWordId
 
-        if (gestures.pinch.phase === 'start' && next.hoveredWordId) {
-          next.selectedWordId = next.hoveredWordId
+        const canDirectSelect =
+          gestures.point.active &&
+          hoveredWordId &&
+          now - hoveredWordSinceRef.current >= DIRECT_WORD_SELECT_DWELL_MS &&
+          now - lastDirectSelectAtRef.current >= DIRECT_SELECT_COOLDOWN_MS
+
+        if (
+          ((gestures.pinch.phase === 'start' ||
+            (gestures.pinch.active && gestures.pinch.strength > 0.68)) ||
+            canDirectSelect) &&
+          hoveredWordId
+        ) {
+          next.selectedWordId = hoveredWordId
           next.phase = 'detail'
           next.detailMode = 'meaning'
           next.interactionCount += 1
           milestonesRef.current.selectedWord = true
+          lastDirectSelectAtRef.current = now
         }
       }
 
@@ -217,22 +245,31 @@ export const useInteractionController = (
           }))
           .sort((left, right) => left.distance - right.distance)[0]
 
-        if (gestures.point.active || gestures.pinch.active) {
-          next.quiz = {
-            ...next.quiz,
-            hoveredOptionId:
-              hoveredOption && hoveredOption.distance < 0.56 ? hoveredOption.id : null,
-          }
+        const hoveredQuizOptionId =
+          hoveredOption && hoveredOption.distance < 0.7 ? hoveredOption.id : null
+        if (hoveredQuizOptionId !== next.quiz.hoveredOptionId) {
+          hoveredQuizSinceRef.current = now
         }
 
+        next.quiz = {
+          ...next.quiz,
+          hoveredOptionId: hoveredQuizOptionId,
+        }
+
+        const canDirectQuizSelect =
+          gestures.point.active &&
+          hoveredQuizOptionId &&
+          now - hoveredQuizSinceRef.current >= DIRECT_QUIZ_SELECT_DWELL_MS &&
+          now - lastDirectSelectAtRef.current >= DIRECT_SELECT_COOLDOWN_MS
+
         if (
-          gestures.pinch.phase === 'start' &&
-          next.quiz.hoveredOptionId &&
+          ((gestures.pinch.phase === 'start' ||
+            (gestures.pinch.active && gestures.pinch.strength > 0.72)) ||
+            canDirectQuizSelect) &&
+          hoveredQuizOptionId &&
           !next.quiz.selectedOptionId
         ) {
-          const selected = next.quiz.options.find(
-            (option) => option.id === next.quiz.hoveredOptionId,
-          )
+          const selected = next.quiz.options.find((option) => option.id === hoveredQuizOptionId)
 
           if (selected) {
             quizAnsweredAtRef.current = now
@@ -243,6 +280,7 @@ export const useInteractionController = (
               selectedOptionId: selected.id,
               answerResult: selected.isCorrect ? 'correct' : 'wrong',
             }
+            lastDirectSelectAtRef.current = now
           }
         }
 

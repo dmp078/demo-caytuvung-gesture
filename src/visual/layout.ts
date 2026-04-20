@@ -1,4 +1,4 @@
-﻿import type { Vec3 } from '../types'
+import type { Vec3 } from '../types'
 
 export const HAND_PLANE_Z = -2
 export const CORE_BASE_Z = -2.85
@@ -9,20 +9,42 @@ export const pointerToWorld = (pointerX: number, pointerY: number): Vec3 => ({
   z: HAND_PLANE_Z,
 })
 
+export const orbitMenuOffset = (
+  index: number,
+  total: number,
+  focusIndex: number,
+): number => {
+  let offset = index - focusIndex
+  const half = total / 2
+
+  while (offset > half) {
+    offset -= total
+  }
+
+  while (offset < -half) {
+    offset += total
+  }
+
+  return offset
+}
+
 export const orbitNodePosition = (
   index: number,
   total: number,
   elapsedSeconds: number,
   anchor: Vec3,
+  focusIndex = 0,
 ): Vec3 => {
-  const angle = elapsedSeconds * 0.9 + (index / total) * Math.PI * 2
-  const verticalWave = Math.sin(elapsedSeconds * 1.5 + index * 0.7) * 0.12
-  const radius = 0.85 + Math.sin(elapsedSeconds * 0.8 + index * 0.5) * 0.11
+  const offset = orbitMenuOffset(index, total, focusIndex)
+  const spacingX = 0.82
+  const lane = Math.sign(offset) * Math.pow(Math.abs(offset), 1.05)
+  const hoverWave = Math.sin(elapsedSeconds * 0.94 + index * 0.7) * 0.06
+  const depthOffset = -Math.abs(offset) * 0.24
 
   return {
-    x: anchor.x + Math.cos(angle) * radius,
-    y: anchor.y + Math.sin(angle * 1.16) * 0.36 + verticalWave,
-    z: CORE_BASE_Z + Math.sin(angle * 1.4) * 0.35,
+    x: anchor.x + lane * spacingX,
+    y: anchor.y + hoverWave + Math.cos(offset * 0.85) * 0.045,
+    z: CORE_BASE_Z + depthOffset + Math.sin(elapsedSeconds * 1.15 + index) * 0.04,
   }
 }
 
